@@ -5,6 +5,7 @@ import argparse
 import sys
 
 import pyperclip
+from .history_window import HistoryWindow 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QTimer
 
@@ -12,6 +13,7 @@ from .logger import log_copied, log_ocr_failure
 from .notifications import notify_copied, notify_ocr_failure
 from .ocr import ensure_tesseract_installed, get_ocr_result
 
+_history_win = None    # 单例历史窗口
 
 class Snipper(QtWidgets.QWidget):
     def __init__(self, parent, langs=None, flags=Qt.WindowFlags()):
@@ -100,7 +102,21 @@ class OneTimeSnipper(Snipper):
             return super().mouseReleaseEvent(event)
 
         ocr_result = self.snipOcr()
+        # if ocr_result:
+        #     pyperclip.copy(ocr_result)
+        #     log_copied(ocr_result)
+        #     notify_copied(ocr_result)
         if ocr_result:
+            # ---------- 弹窗 ----------
+            from .result_dialog import ResultDialog
+            global _history_win                     # 单例
+            if _history_win is None:
+                _history_win = HistoryWindow()
+                _history_win.show()                # 模态外常驻
+            dlg = ResultDialog(ocr_result, _history_win.add_record)
+            dlg.exec()
+
+            # ---------- 原有逻辑 ----------
             pyperclip.copy(ocr_result)
             log_copied(ocr_result)
             notify_copied(ocr_result)
